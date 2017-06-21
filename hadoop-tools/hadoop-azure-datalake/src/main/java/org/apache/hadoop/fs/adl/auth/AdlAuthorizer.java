@@ -39,7 +39,7 @@ public interface AdlAuthorizer {
   void init(Configuration conf) throws AdlAuthorizationException;
 
   /**
-   * Checks if a provided owner is authorized to perform the provided operation on the provided directory.
+   * Checks if the provided {@link AdlAccessType} is allowed on the provided {@link Path}
    *
    * @param absolutePath The absolute path of the storage being accessed
    * @param accessType   {@link AdlAccessType} being requested
