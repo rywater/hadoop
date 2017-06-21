@@ -59,6 +59,10 @@ public final class AdlConfKeys {
 
   public static final String WRITE_BUFFER_SIZE_KEY =
       "adl.feature.client.cache.drop.behind.writes";
+
+  public static final String ADL_EXTERNAL_AUTHORIZATION_CLASS =
+      "adl.external.authorization.class";
+
   static final String SECURE_TRANSPORT_SCHEME = "https";
   static final String INSECURE_TRANSPORT_SCHEME = "http";
   static final String ADL_DEBUG_OVERRIDE_LOCAL_USER_AS_OWNER =

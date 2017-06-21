@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.adl.auth.MockAdlAuthorizer;
 import org.apache.hadoop.fs.adl.common.CustomMockTokenProvider;
 import org.apache.hadoop.fs.adl.oauth2.AzureADTokenProvider;
 import static org.apache.hadoop.fs.adl.AdlConfKeys
@@ -90,6 +91,7 @@ public class AdlMockWebServer {
     conf.setClass(AZURE_AD_TOKEN_PROVIDER_CLASS_KEY,
         CustomMockTokenProvider.class, AzureADTokenProvider.class);
 
+    conf.set(AdlConfKeys.ADL_EXTERNAL_AUTHORIZATION_CLASS, MockAdlAuthorizer.class.getName());
     URI uri = new URI("adl://localhost:" + port);
     fs.initialize(uri, conf);
   }

@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.microsoft.azure.datalake.store.ADLStoreClient;
@@ -53,6 +54,10 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.adl.auth.AdlAuthorizationException;
+import org.apache.hadoop.fs.adl.auth.AdlAccessType;
+import org.apache.hadoop.fs.adl.auth.AdlAuthorizer;
+import org.apache.hadoop.fs.adl.auth.AdlAuthorizerFactory;
 import org.apache.hadoop.fs.adl.oauth2.AzureADTokenProvider;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -82,7 +87,7 @@ public class AdlFileSystem extends FileSystem {
   private Path workingDirectory;
   private boolean aclBitStatus;
   private UserGroupRepresentation oidOrUpn;
-
+  private AdlAuthorizer authorizer;
 
   // retained for tests
   private AccessTokenProvider tokenProvider;
@@ -193,6 +198,13 @@ public class AdlFileSystem extends FileSystem {
         ADL_ENABLEUPN_FOR_OWNERGROUP_DEFAULT);
     oidOrUpn = enableUPN ? UserGroupRepresentation.UPN :
         UserGroupRepresentation.OID;
+
+    initAuthorizer(conf);
+  }
+
+  private void initAuthorizer(Configuration configuration) throws IOException {
+    Optional<AdlAuthorizer> authorizer = AdlAuthorizerFactory.create(configuration);
+    authorizer.ifPresent(adlAuthorizer -> this.authorizer = adlAuthorizer);
   }
 
   /**
@@ -337,6 +349,7 @@ public class AdlFileSystem extends FileSystem {
   public FSDataOutputStream create(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
+    performAuthCheck(AdlAccessType.CREATE, f);
     statistics.incrementWriteOps(1);
     IfExists overwriteRule = overwrite ? IfExists.OVERWRITE : IfExists.FAIL;
     return new FSDataOutputStream(new AdlFsOutputStream(adlClient
@@ -367,6 +380,7 @@ public class AdlFileSystem extends FileSystem {
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
       EnumSet<CreateFlag> flags, int bufferSize, short replication,
       long blockSize, Progressable progress) throws IOException {
+    performAuthCheck(AdlAccessType.CREATE, f);
     statistics.incrementWriteOps(1);
     IfExists overwriteRule = IfExists.FAIL;
     for (CreateFlag flag : flags) {
@@ -394,6 +408,7 @@ public class AdlFileSystem extends FileSystem {
   @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
+    performAuthCheck(AdlAccessType.APPEND, f);
     statistics.incrementWriteOps(1);
     return new FSDataOutputStream(
         new AdlFsOutputStream(adlClient.getAppendStream(toRelativeFilePath(f)),
@@ -435,6 +450,7 @@ public class AdlFileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(final Path f, final int buffersize)
       throws IOException {
+    performAuthCheck(AdlAccessType.OPEN, f);
     statistics.incrementReadOps(1);
     return new FSDataInputStream(
         new AdlFsInputStream(adlClient.getReadStream(toRelativeFilePath(f)),
@@ -451,6 +467,7 @@ public class AdlFileSystem extends FileSystem {
    */
   @Override
   public FileStatus getFileStatus(final Path f) throws IOException {
+    performAuthCheck(AdlAccessType.GET_FILE_STATUS, f);
     statistics.incrementReadOps(1);
     DirectoryEntry entry =
         adlClient.getDirectoryEntry(toRelativeFilePath(f), oidOrUpn);
@@ -468,6 +485,7 @@ public class AdlFileSystem extends FileSystem {
    */
   @Override
   public FileStatus[] listStatus(final Path f) throws IOException {
+    performAuthCheck(AdlAccessType.LIST_STATUS, f);
     statistics.incrementReadOps(1);
     List<DirectoryEntry> entries =
         adlClient.enumerateDirectory(toRelativeFilePath(f), oidOrUpn);
@@ -487,6 +505,7 @@ public class AdlFileSystem extends FileSystem {
    */
   @Override
   public boolean rename(final Path src, final Path dst) throws IOException {
+    performAuthCheck(AdlAccessType.RENAME, src, dst);
     statistics.incrementWriteOps(1);
     if (toRelativeFilePath(src).equals("/")) {
       return false;
@@ -542,6 +561,7 @@ public class AdlFileSystem extends FileSystem {
   @Override
   public boolean delete(final Path path, final boolean recursive)
       throws IOException {
+    performAuthCheck(AdlAccessType.DELETE, path);
     statistics.incrementWriteOps(1);
     String relativePath = toRelativeFilePath(path);
     // Delete on root directory not supported.
@@ -574,6 +594,7 @@ public class AdlFileSystem extends FileSystem {
   @Override
   public boolean mkdirs(final Path path, final FsPermission permission)
       throws IOException {
+    performAuthCheck(AdlAccessType.MKDIRS, path);
     statistics.incrementWriteOps(1);
     return adlClient.createDirectory(toRelativeFilePath(path),
         Integer.toOctalString(applyUMask(permission).toShort()));
@@ -982,5 +1003,17 @@ public class AdlFileSystem extends FileSystem {
   public void setUserGroupRepresentationAsUPN(boolean enableUPN) {
     oidOrUpn = enableUPN ? UserGroupRepresentation.UPN :
         UserGroupRepresentation.OID;
+  }
+
+  private void performAuthCheck(AdlAccessType authorizationType, Path... pathsRequested) throws AdlAuthorizationException {
+    if (authorizer != null) {
+      for (Path path : pathsRequested) {
+        Path qualifiedPath = path.makeQualified(getUri(), getWorkingDirectory());
+        if (!authorizer.isAuthorized(path, authorizationType)) {
+          throw new AdlAuthorizationException(String.format("User is not authorized for %s on %s directory",
+                  authorizationType.toString().toLowerCase(), qualifiedPath.toString()));
+        }
+      }
+    }
   }
 }
