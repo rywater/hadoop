@@ -30,7 +30,7 @@ public class MockAdlAuthorizer implements AdlAuthorizer {
 
   @Override
   public boolean isAuthorized(AdlAccessType accessType, Path... paths) throws AdlAuthorizationException {
-    return false;
+    return true;
   }
 
 }
