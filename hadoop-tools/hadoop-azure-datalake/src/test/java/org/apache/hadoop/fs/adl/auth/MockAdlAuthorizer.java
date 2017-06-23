@@ -29,8 +29,8 @@ public class MockAdlAuthorizer implements AdlAuthorizer {
   }
 
   @Override
-  public boolean isAuthorized(Path absolutePath, AdlAccessType accessType) throws AdlAuthorizationException {
-    return true;
+  public boolean isAuthorized(AdlAccessType accessType, Path... paths) throws AdlAuthorizationException {
+    return false;
   }
 
 }
