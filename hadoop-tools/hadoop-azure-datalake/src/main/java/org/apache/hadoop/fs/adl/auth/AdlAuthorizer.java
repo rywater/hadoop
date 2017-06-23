@@ -39,13 +39,13 @@ public interface AdlAuthorizer {
   void init(Configuration conf) throws AdlAuthorizationException;
 
   /**
-   * Checks if the provided {@link AdlAccessType} is allowed on the provided {@link Path}
    *
-   * @param absolutePath The absolute path of the storage being accessed
-   * @param accessType   {@link AdlAccessType} being requested
-   * @return true if authorized, otherwise false
+   * @param accessType the {@link AdlAccessType} being requested for authorization
+   * @param paths The absolute paths of the storage being accessed. Some operations may request operation access
+   *              to multiple directories. For example: {@link AdlAccessType#RENAME} will ask for access to two
+   *              directories, a source and destination.
+   * @return true if access is authorized for all requested directories, otherwise false.
    * @throws AdlAuthorizationException on authorization failure
    */
-  boolean isAuthorized(Path absolutePath, AdlAccessType accessType) throws AdlAuthorizationException;
-
+  boolean isAuthorized(AdlAccessType accessType, Path... paths) throws AdlAuthorizationException;
 }

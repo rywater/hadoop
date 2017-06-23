@@ -21,10 +21,8 @@ package org.apache.hadoop.fs.adl;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Stream;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.microsoft.azure.datalake.store.ADLStoreClient;
@@ -1007,13 +1005,14 @@ public class AdlFileSystem extends FileSystem {
 
   private void performAuthCheck(AdlAccessType authorizationType, Path... pathsRequested) throws AdlAuthorizationException {
     if (authorizer != null) {
-      for (Path path : pathsRequested) {
-        Path qualifiedPath = path.makeQualified(getUri(), getWorkingDirectory());
-        if (!authorizer.isAuthorized(path, authorizationType)) {
-          throw new AdlAuthorizationException(String.format("User is not authorized for %s on %s directory",
-                  authorizationType.toString().toLowerCase(), qualifiedPath.toString()));
-        }
+      if (!authorizer.isAuthorized(authorizationType, pathsRequested)) {
+        throw new AdlAuthorizationException(String.format("User is not authorized for %s on %s directory",
+                authorizationType, Arrays.deepToString(toQualifiedPaths(pathsRequested))));
       }
     }
+  }
+  
+  private String[] toQualifiedPaths(Path... paths) {
+    return Stream.of(paths).map(p -> p.makeQualified(getUri(), getWorkingDirectory())).toArray(String[]::new);
   }
 }
