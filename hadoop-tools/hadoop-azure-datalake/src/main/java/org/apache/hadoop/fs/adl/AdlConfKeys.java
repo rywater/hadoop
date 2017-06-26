@@ -51,6 +51,9 @@ public final class AdlConfKeys {
   // OAuth Client Cred Token Configuration
   public static final String AZURE_AD_CLIENT_SECRET_KEY =
       "fs.adl.oauth2.credential";
+  public static final String FS_ADL_ENABLE_KERBEROS_SUPPORT =
+      "fs.adl.enable.kerberos.support";
+  public static final boolean FS_ADL_ENABLE_KERBEROS_SUPPORT_DEFAULT = false;
   public static final String TOKEN_PROVIDER_TYPE_CLIENT_CRED =
       "ClientCredential";
 
@@ -59,6 +62,12 @@ public final class AdlConfKeys {
 
   public static final String WRITE_BUFFER_SIZE_KEY =
       "adl.feature.client.cache.drop.behind.writes";
+
+  public static final String ADL_EXTERNAL_AUTHORIZATION_CLASS =
+      "adl.external.authorization.class";
+  public static final String KEY_CRED_SERVICE_URL =
+      "fs.azure.cred.service.url";
+
   static final String SECURE_TRANSPORT_SCHEME = "https";
   static final String INSECURE_TRANSPORT_SCHEME = "http";
   static final String ADL_DEBUG_OVERRIDE_LOCAL_USER_AS_OWNER =
